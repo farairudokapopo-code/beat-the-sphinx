@@ -2,7 +2,7 @@
 
 A daily riddle game with a pixel-art Sphinx. Answer three riddles of rising difficulty. Get at least two right to walk free, or the Sphinx eats you.
 
-**Play it:** _add your GitHub Pages link here_
+**Play it:** _(https://farairudokapopo-code.github.io/beat-the-sphinx/)_
 
 ## How it works
 
