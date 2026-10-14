@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Beat the Sphinx | A daily riddle challenge</title>
+  <meta name="description" content="Answer three riddles from the Sphinx. Get two right or be eaten.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Beat the Sphinx</h1>
+      <p id="puzzle-no"></p>
+    </header>
+
+    <section id="riddle-view" hidden>
+      <div class="progress" id="progress" aria-label="Progress"></div>
+      <p class="tier" id="tier"></p>
+      <p class="riddle" id="riddle"></p>
+      <form id="answer-form" autocomplete="off">
+        <label for="answer" class="sr-only">Your answer</label>
+        <input id="answer" type="text" placeholder="Type your answer" required>
+        <button type="submit" id="submit-btn">Answer</button>
+      </form>
+      <div id="feedback" role="status" hidden>
+        <p id="feedback-text"></p>
+        <button type="button" id="next-btn">Next riddle</button>
+      </div>
+    </section>
+
+    <section id="result-view" hidden>
+      <h2 id="verdict"></h2>
+      <p id="verdict-sub"></p>
+      <div class="progress" id="result-progress"></div>
+      <button type="button" id="share-btn">Copy result</button>
+      <dl class="stats" id="stats"></dl>
+      <p class="note">A new set of riddles arrives at midnight.</p>
+    </section>
+  </main>
+  <script src="riddles.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>

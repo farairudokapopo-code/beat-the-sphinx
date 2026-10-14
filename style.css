@@ -1,0 +1,50 @@
+:root {
+  --night: #0f1530; --dusk: #3a2f4f; --sand: #eadfc4; --gold: #d9a441;
+  --jade: #5fa77a; --blood: #c4533f; --panel: rgba(255, 255, 255, 0.06);
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; min-height: 100vh; color: var(--sand);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif; line-height: 1.5;
+  background: linear-gradient(180deg, var(--night) 0%, var(--dusk) 100%) fixed;
+  display: flex; justify-content: center;
+}
+/* Pyramid silhouettes on the horizon */
+body::after {
+  content: ""; position: fixed; left: 0; right: 0; bottom: 0; height: 22vh; z-index: -1;
+  background: #0a0e22;
+  clip-path: polygon(0 100%, 0 80%, 18% 80%, 30% 30%, 42% 80%, 58% 80%, 72% 5%, 88% 80%, 100% 80%, 100% 100%);
+}
+main { width: 100%; max-width: 34rem; padding: 2rem 1.25rem 8rem; }
+header { text-align: center; margin-bottom: 2rem; }
+h1 { font-family: "Cinzel", Georgia, serif; font-weight: 800; font-size: clamp(2rem, 8vw, 3rem); color: var(--gold); margin: 0; letter-spacing: 0.03em; }
+header p { margin: 0.25rem 0 0; opacity: 0.7; }
+.tier { margin: 1rem 0 0.5rem; opacity: 0.75; }
+.riddle { font-family: "Cinzel", Georgia, serif; font-weight: 600; font-size: clamp(1.25rem, 5vw, 1.6rem); line-height: 1.4; margin: 0 0 1.5rem; max-width: 34ch; }
+.progress { display: flex; gap: 0.6rem; }
+.dot { width: 0.9rem; height: 0.9rem; border-radius: 50%; border: 2px solid var(--gold); }
+.dot.current { background: var(--gold); }
+.dot.right { background: var(--jade); border-color: var(--jade); }
+.dot.wrong { background: var(--blood); border-color: var(--blood); }
+form { display: flex; gap: 0.5rem; }
+input { flex: 1; min-width: 0; padding: 0.8rem 1rem; font-size: 1rem; color: var(--sand); background: var(--panel); border: 1px solid rgba(234, 223, 196, 0.35); border-radius: 0.5rem; }
+input::placeholder { color: rgba(234, 223, 196, 0.5); }
+button { padding: 0.8rem 1.25rem; font-size: 1rem; font-weight: 600; color: var(--night); background: var(--gold); border: 0; border-radius: 0.5rem; cursor: pointer; }
+button:hover { filter: brightness(1.1); }
+:focus-visible { outline: 3px solid var(--sand); outline-offset: 2px; }
+#feedback { margin-top: 0.5rem; }
+#feedback p { font-size: 1.15rem; margin: 0 0 1rem; }
+#feedback.right p { color: var(--jade); }
+#feedback.wrong p { color: var(--blood); }
+#result-view h2 { font-family: "Cinzel", Georgia, serif; font-size: clamp(1.8rem, 7vw, 2.4rem); margin: 0 0 0.25rem; }
+#result-view.survived h2 { color: var(--jade); }
+#result-view.eaten h2 { color: var(--blood); }
+#verdict-sub { margin: 0 0 1.25rem; }
+#share-btn { margin: 1.5rem 0; }
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; margin: 0; text-align: center; }
+.stats div { background: var(--panel); border-radius: 0.5rem; padding: 0.75rem 0.25rem; }
+.stats dd { margin: 0; font-size: 1.5rem; font-weight: 700; }
+.stats dt { font-size: 0.85rem; opacity: 0.7; }
+.note { opacity: 0.65; font-size: 0.9rem; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+@media (prefers-reduced-motion: no-preference) { button { transition: filter 0.15s; } }
