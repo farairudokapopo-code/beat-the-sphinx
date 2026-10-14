@@ -19,20 +19,6 @@ A daily riddle game with a pixel-art Sphinx. Answer three riddles of rising diff
 - Respects `prefers-reduced-motion`
 - No frameworks, no build step, no dependencies
 
-## Run it locally
-
-Open the folder in VS Code and use the Live Server extension, or run:
-
-```
-python -m http.server 8000
-```
-
-Then visit http://localhost:8000. To replay the same day, clear `sphinx-game` and `sphinx-stats` in your browser's localStorage.
-
-## Deploy
-
-Push to GitHub, then go to Settings, then Pages, and deploy from the `main` branch root.
-
 ## Project structure
 
 | File | Purpose |
@@ -43,10 +29,6 @@ Push to GitHub, then go to Settings, then Pages, and deploy from the `main` bran
 | `riddles.js` | Riddle data by difficulty |
 | `sprites.js` | Pixel sprite grids and canvas drawing |
 | `sound.js` | Synthesized sound effects |
-
-## Adding riddles
-
-Edit `riddles.js`. Each riddle looks like `{ q: "Question?", a: ["answer", "other accepted answer"] }`. The first answer is shown when a player gets it wrong.
 
 ## Ideas for later
 
