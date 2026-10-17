@@ -9,10 +9,13 @@ A daily riddle game with a pixel-art Sphinx. Answer three riddles of rising diff
 - Every player gets the same three riddles each day (easy, medium, hard).
 - You get one try per riddle. Answer matching ignores case, punctuation, "a/the", and simple plurals.
 - Your streak and stats are saved in your browser, and you can copy a spoiler-free result to share.
+- You earn points every day (10/20/30 per riddle, a survival bonus, and a streak bonus). Points are saved in a player profile and will be spent on characters in the shop.
 
 ## Features
 
 - Daily puzzle chosen from the date with a seeded shuffle, so riddles don't repeat until a tier is used up
+- A shop with 10 mythology gods (Egyptian and Greek). Each gives a power and has a drawback tied to its myth, and one helper can be brought to each day's riddles
+- A short how-to-play tutorial that appears before the first game
 - Pixel-art Sphinx and icons drawn from text grids onto a canvas (`sprites.js`)
 - Frame-stepped animation: bobbing, blinking, shaking, chomping, typewriter text
 - 8-bit sound effects generated with the Web Audio API, with a saved mute toggle (`sound.js`)
