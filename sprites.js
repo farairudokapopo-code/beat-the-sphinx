@@ -32,17 +32,18 @@ const SPHINX_MOODS = {
 const ICONS = {
   ankh:  ["..gggg..", ".g....g.", ".g....g.", "..gggg..", ".gggggg.", "...gg...", "...gg...", "...gg..."],
   skull: [".WWWWWW.", "WWWWWWWW", "WKKWWKKW", "WKKWWKKW", "WWWKKWWW", ".WWWWWW.", ".WKWKWK.", ".WWWWWW."],
+  coin:  [".GGGGGG.", "GGGWGGGG", "GGWGGGYG", "GGWGGGYG", "GGGGGGYG", "GGGGGYYG", ".GYYYYG.", "..GGGG.."],
   empty: ["GGGGGGGG", "G......G", "G......G", "G......G", "G......G", "G......G", "G......G", "GGGGGGGG"],
   now:   ["GGGGGGGG", "GGGGGGGG", "GGGGGGGG", "GGGGGGGG", "GGGGGGGG", "GGGGGGGG", "GGGGGGGG", "GGGGGGGG"]
 };
 
-function drawSprite(canvas, rows) {
+function drawSprite(canvas, rows, pal = PAL) {
   canvas.width = rows[0].length;
   canvas.height = rows.length;
   const ctx = canvas.getContext("2d");
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   rows.forEach((row, y) => [...row].forEach((ch, x) => {
-    if (PAL[ch]) { ctx.fillStyle = PAL[ch]; ctx.fillRect(x, y, 1, 1); }
+    if (pal[ch]) { ctx.fillStyle = pal[ch]; ctx.fillRect(x, y, 1, 1); }
   }));
 }
 
