@@ -2,6 +2,7 @@
 const missingFiles = [];
 if (typeof RIDDLES === "undefined") missingFiles.push("riddles.js");
 if (typeof drawSphinx === "undefined") missingFiles.push("sprites.js");
+if (typeof GODS === "undefined") missingFiles.push("gods.js");
 if (typeof playSfx === "undefined") missingFiles.push("sound.js");
 if (missingFiles.length) {
   document.querySelector("main").insertAdjacentHTML("beforeend",
@@ -45,12 +46,25 @@ function pickRiddle(tier, tierIndex, day) {
 function normalize(text) {
   return text.toLowerCase().replace(/[^a-z0-9\s]/g, "").replace(/^(a|an|the)\s+/, "").replace(/\s+/g, " ").trim();
 }
-function isCorrect(guess, riddle) {
+function editDistance(a, b) { // number of single-letter edits between two words
+  const row = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    let prev = row[0]; row[0] = i;
+    for (let j = 1; j <= b.length; j++) {
+      const temp = row[j];
+      row[j] = Math.min(row[j] + 1, row[j - 1] + 1, prev + (a[i - 1] === b[j - 1] ? 0 : 1));
+      prev = temp;
+    }
+  }
+  return row[b.length];
+}
+function isCorrect(guess, riddle, forgiveTypos) {
   const g = normalize(guess);
   if (!g) return false;
   return riddle.a.some((ans) => {
     const a = normalize(ans);
-    return g === a || g === a + "s" || g + "s" === a;
+    if (g === a || g === a + "s" || g + "s" === a) return true;
+    return forgiveTypos && a.length >= 4 && editDistance(g, a) <= 1;
   });
 }
 
@@ -61,12 +75,78 @@ function load(key, fallback) {
 function save(key, value) {
   try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
 }
+function freshMods() {
+  return { half: [false, false, false], zero: [false, false, false], hintShown: [false, false, false],
+    hints: 0, reroll: -1, smite: false, forgiven: false, retryUsed: false };
+}
 
 const day = dayNumber();
-const riddles = TIERS.map((t, i) => pickRiddle(t, i, day));
 let game = load("sphinx-game", null);
 if (!game || game.day !== day) game = { day, results: [] };
+if (!game.mods) game.mods = freshMods();
+const riddles = TIERS.map((t, i) => pickRiddle(t, i, day));
+if (game.mods.reroll >= 0) riddles[game.mods.reroll] = pickRiddle(TIERS[game.mods.reroll], game.mods.reroll, day + 1);
 let stats = load("sphinx-stats", { played: 0, wins: 0, streak: 0, best: 0, lastWinDay: 0 });
+let profile = Object.assign({ points: 0, lifetime: 0, games: 0, owned: [], equipped: null, seenTutorial: false },
+  load("sphinx-profile", {}));
+const saveGame = () => save("sphinx-game", game);
+const saveProfile = () => save("sphinx-profile", profile);
+
+/* ---------- Gods ---------- */
+// The helper is locked in when you start today's riddles. Shop changes apply from tomorrow.
+function activeGod() { return godById(game.god !== undefined ? game.god : profile.equipped); }
+function lockGod() { if (game.god === undefined) { game.god = profile.equipped; saveGame(); } }
+
+/* ---------- Points ---------- */
+const POINTS = { correct: [10, 20, 30], survive: 20, streakEach: 5, streakCap: 7 };
+function computeEarned(g, survived, streak) {
+  const m = g.mods, res = g.results, god = g.god;
+  const worth = (i) => POINTS.correct[i] * (m.half[i] ? 0.5 : 1);
+  let riddlesPts = 0;
+  res.forEach((ok, i) => { if (ok && !m.zero[i]) riddlesPts += worth(i); });
+  const wrong = res.filter((ok) => !ok).length;
+  let survive = survived ? POINTS.survive : 0;
+  let streakPts = survived ? Math.min(streak, POINTS.streakCap) * POINTS.streakEach : 0;
+  let perk = 0;
+  if (god === "osiris" && survived) survive = POINTS.survive / 2;
+  if (god === "ra") streakPts = 0;
+  if (god === "thoth") perk = -5 * m.hints;
+  if (god === "anubis" && m.forgiven) perk = -10;
+  if (god === "zeus" && m.smite) perk = -15;
+  if (god === "bastet" && res[0] && !m.zero[0]) perk = -worth(0);
+  if (god === "athena") perk = Math.floor(riddlesPts / 2) - 10 * wrong;
+  if (god === "hades") perk = (res[2] && !m.zero[2] ? worth(2) : 0) - (res[2] ? 0 : 20);
+  const total = Math.max(0, riddlesPts + survive + streakPts + perk);
+  return { riddles: riddlesPts, survive, streak: streakPts, perk, god: god || null, total };
+}
+function updatePoints(animate) {
+  $("points").textContent = profile.points;
+  $("shop-points").textContent = profile.points;
+  if (animate && !REDUCED_MOTION) restart($("points-pill"), "pop");
+}
+function updateHelper() {
+  const g = activeGod();
+  $("helper").textContent = g ? `Helper: ${g.name}` : "No helper equipped";
+}
+function renderEarn() {
+  const box = $("earn"), e = game.earned;
+  if (!e) { box.hidden = true; return; }
+  box.hidden = false;
+  box.innerHTML = "";
+  const rows = [["Riddles", e.riddles]];
+  if (e.survive) rows.push(["Survived", e.survive]);
+  if (e.streak) rows.push(["Streak bonus", e.streak]);
+  if (e.perk) rows.push([godById(e.god).name, e.perk]);
+  rows.push(["Total", e.total, true]);
+  rows.forEach(([label, value, isTotal]) => {
+    const row = document.createElement("div");
+    row.className = "earn-row" + (isTotal ? " total" : "");
+    const a = document.createElement("span"); a.textContent = label;
+    const b = document.createElement("span"); b.textContent = (value > 0 ? "+" : "") + value;
+    row.append(a, b);
+    box.appendChild(row);
+  });
+}
 
 /* ---------- Sprites and animation ---------- */
 const sphinx = $("sphinx");
@@ -75,8 +155,7 @@ let mood = "watch", chompTimer = null, typer = null;
 function setMood(m) { mood = m; drawSphinx(sphinx, m); }
 function restart(el, cls) { el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); }
 
-// The Sphinx blinks every few seconds while watching
-setInterval(() => {
+setInterval(() => { // the Sphinx blinks every few seconds while watching
   if (mood !== "watch" || REDUCED_MOTION) return;
   drawSphinx(sphinx, "blink");
   setTimeout(() => mood === "watch" && drawSphinx(sphinx, "watch"), 180);
@@ -107,6 +186,28 @@ function renderProgress(el, popIndex = -1) {
   });
 }
 
+/* ---------- Hints and powers ---------- */
+function renderHint(i) {
+  const el = $("hint"), g = activeGod();
+  if (!game.mods.hintShown[i] || !g) { el.hidden = true; return; }
+  const word = riddles[i].a[0];
+  const blanks = [...word].map((ch) => (ch === " " ? " " : "_"));
+  if (g.power === "hint-first") blanks[0] = word[0].toUpperCase();
+  el.textContent = (g.power === "hint-first" ? "Starts with: " : "Letters: ") + blanks.join(" ");
+  el.hidden = false;
+}
+function refreshPower() {
+  const g = activeGod(), m = game.mods, i = game.results.length, btn = $("power-btn");
+  let show = false;
+  if (g && g.active && i < 3 && !$("answer-form").hidden) {
+    if (g.power === "reroll") show = m.reroll < 0;
+    else if (g.power === "smite") show = !m.smite;
+    else show = !m.hintShown[i];
+  }
+  btn.hidden = !show;
+  if (show) btn.textContent = g.powerLabel;
+}
+
 /* ---------- Screens ---------- */
 function showRiddle() {
   const i = game.results.length;
@@ -118,6 +219,8 @@ function showRiddle() {
   typeText($("riddle"), riddles[i].q);
   $("answer").value = "";
   renderProgress($("progress"));
+  renderHint(i);
+  refreshPower();
   setMood("watch");
   $("answer").focus();
 }
@@ -133,7 +236,10 @@ function showResult() {
     ? `${score} of 3 correct. You may pass.`
     : `${score} of 3 correct. You needed 2.`;
   renderProgress($("result-progress"));
+  renderEarn();
+  updatePoints(true);
   playSfx(survived ? "win" : "lose");
+  if (game.earned && game.earned.total > 0) setTimeout(() => playSfx("coin"), 1000);
   clearInterval(chompTimer);
   if (survived) {
     setMood("happy");
@@ -159,7 +265,7 @@ function showResult() {
 function finishGame() {
   if (game.counted) return;
   game.counted = true;
-  save("sphinx-game", game);
+  if (game.god === undefined) game.god = profile.equipped;
   const survived = game.results.filter(Boolean).length >= 2;
   stats.played++;
   if (survived) {
@@ -167,24 +273,29 @@ function finishGame() {
     stats.streak = stats.lastWinDay === day - 1 ? stats.streak + 1 : 1;
     stats.lastWinDay = day;
     stats.best = Math.max(stats.best, stats.streak);
+  } else if (game.god === "osiris") {
+    stats.lastWinDay = day; // Osiris: rebirth keeps the streak alive
   } else {
     stats.streak = 0;
   }
+  game.earned = computeEarned(game, survived, stats.streak);
+  profile.points += game.earned.total;
+  profile.lifetime += game.earned.total;
+  profile.games++;
   save("sphinx-stats", stats);
+  saveProfile();
+  saveGame();
 }
 
-/* ---------- Events ---------- */
-$("answer-form").addEventListener("submit", (e) => {
-  e.preventDefault();
-  clearInterval(typer);
+function recordResult(correct, message) {
   const i = game.results.length;
-  $("riddle").textContent = riddles[i].q;
-  const correct = isCorrect($("answer").value, riddles[i]);
   game.results.push(correct);
-  save("sphinx-game", game);
+  saveGame();
   renderProgress($("progress"), i);
   $("answer-form").hidden = true;
-  $("feedback-text").textContent = correct ? "Correct!" : `Wrong! The answer was "${riddles[i].a[0]}".`;
+  $("hint").hidden = true;
+  $("power-btn").hidden = true;
+  $("feedback-text").textContent = message;
   $("feedback").className = correct ? "right" : "wrong";
   $("next-btn").textContent = game.results.length === 3 ? "Face your fate" : "Next riddle";
   $("feedback").hidden = false;
@@ -192,6 +303,113 @@ $("answer-form").addEventListener("submit", (e) => {
   setMood(correct ? "happy" : "hungry");
   if (!correct) restart(sphinx, "shake");
   $("next-btn").focus();
+}
+
+/* ---------- Shop and tutorial ---------- */
+function renderShop() {
+  const list = $("shop-list");
+  list.innerHTML = "";
+  $("shop-note").textContent = game.god !== undefined
+    ? "Today's helper is locked in. Changes apply tomorrow."
+    : "Pick one helper to bring to today's riddles.";
+  GODS.forEach((g) => {
+    const owned = profile.owned.includes(g.id), equipped = profile.equipped === g.id;
+    const card = document.createElement("div");
+    card.className = "shop-card" + (equipped ? " equipped" : "");
+    const art = document.createElement("canvas");
+    art.className = "sprite god-canvas";
+    drawSprite(art, godRows(g), godPalette(g));
+    const info = document.createElement("div");
+    const title = document.createElement("h3"); title.textContent = `${g.name}: ${g.title}`;
+    const perk = document.createElement("p"); perk.className = "perk"; perk.textContent = "Power: " + g.perk;
+    const drawback = document.createElement("p"); drawback.className = "drawback"; drawback.textContent = "Drawback: " + g.drawback;
+    const btn = document.createElement("button");
+    btn.type = "button";
+    if (!owned) {
+      btn.textContent = `Buy for ${g.cost}`;
+      btn.disabled = profile.points < g.cost;
+      btn.addEventListener("click", () => buyGod(g));
+    } else {
+      btn.textContent = equipped ? "Unequip" : "Equip";
+      btn.addEventListener("click", () => equipGod(g));
+    }
+    info.append(title, perk, drawback, btn);
+    card.append(art, info);
+    list.appendChild(card);
+  });
+}
+function buyGod(g) {
+  if (profile.owned.includes(g.id) || profile.points < g.cost) return;
+  profile.points -= g.cost;
+  profile.owned.push(g.id);
+  saveProfile();
+  updatePoints(true);
+  playSfx("coin");
+  renderShop();
+}
+function equipGod(g) {
+  profile.equipped = profile.equipped === g.id ? null : g.id;
+  saveProfile();
+  playSfx("click");
+  updateHelper();
+  renderShop();
+  if (!$("riddle-view").hidden && game.god === undefined) { renderHint(game.results.length); refreshPower(); }
+}
+
+let tutorialDone = null;
+function openTutorial(onClose) {
+  tutorialDone = onClose || null;
+  $("tut-start").textContent = profile.seenTutorial ? "Got it" : "Start";
+  $("tutorial").hidden = false;
+  $("tut-start").focus();
+}
+function closeShop() { $("shop").hidden = true; }
+
+/* ---------- Events ---------- */
+$("answer-form").addEventListener("submit", (e) => {
+  e.preventDefault();
+  clearInterval(typer);
+  lockGod();
+  const g = activeGod(), m = game.mods, i = game.results.length;
+  $("riddle").textContent = riddles[i].q;
+  const correct = isCorrect($("answer").value, riddles[i], g && g.power === "typo");
+  const answer = riddles[i].a[0];
+  if (!correct && g && g.power === "retry" && !m.retryUsed) {
+    m.retryUsed = true; m.half[i] = true; saveGame();
+    $("hint").textContent = "Isis grants a second try! It is worth half points.";
+    $("hint").hidden = false;
+    $("answer").value = "";
+    $("answer").focus();
+    playSfx("wrong");
+    return;
+  }
+  if (!correct && g && g.power === "forgive" && !m.forgiven) {
+    m.forgiven = true; m.zero[i] = true;
+    recordResult(true, `Wrong! The answer was "${answer}". Anubis weighs your heart and forgives you. No points for this one.`);
+    return;
+  }
+  recordResult(correct, correct ? "Correct!" : `Wrong! The answer was "${answer}".`);
+});
+
+$("power-btn").addEventListener("click", () => {
+  const g = activeGod();
+  if (!g) return;
+  lockGod();
+  const m = game.mods, i = game.results.length;
+  playSfx("click");
+  if (g.power === "hint-length" || g.power === "hint-first") {
+    m.hintShown[i] = true; m.hints++; saveGame();
+    renderHint(i); refreshPower(); $("answer").focus();
+  } else if (g.power === "reroll") {
+    m.reroll = i; m.half[i] = true;
+    riddles[i] = pickRiddle(TIERS[i], i, day + 1);
+    saveGame();
+    typeText($("riddle"), riddles[i].q);
+    renderHint(i); refreshPower(); $("answer").focus();
+  } else if (g.power === "smite") {
+    m.smite = true; m.zero[i] = true;
+    recordResult(true, `Zeus strikes the riddle down! The answer was "${riddles[i].a[0]}". No points for this one.`);
+  }
 });
 
 $("next-btn").addEventListener("click", () => {
@@ -204,7 +422,8 @@ $("share-btn").addEventListener("click", async () => {
   playSfx("click");
   const score = game.results.filter(Boolean).length;
   const grid = game.results.map((r) => (r ? "🟢" : "🔴")).join("");
-  const text = `Beat the Sphinx #${day} ${score}/3\n${grid}\n${score >= 2 ? "Survived" : "Eaten"}`;
+  const god = godById(game.god);
+  const text = `Beat the Sphinx #${day} ${score}/3\n${grid}\n${score >= 2 ? "Survived" : "Eaten"}${god ? " with " + god.name : ""}`;
   try { await navigator.clipboard.writeText(text); $("share-btn").textContent = "Copied!"; }
   catch { $("share-btn").textContent = "Copy failed"; }
   setTimeout(() => ($("share-btn").textContent = "Copy result"), 2000);
@@ -219,10 +438,29 @@ $("mute").addEventListener("click", () => {
   if (!nowMuted) playSfx("click");
 });
 
+$("shop-btn").addEventListener("click", () => { playSfx("click"); renderShop(); $("shop").hidden = false; $("shop-close").focus(); });
+$("shop-close").addEventListener("click", () => { playSfx("click"); closeShop(); });
+$("help-btn").addEventListener("click", () => { playSfx("click"); openTutorial(null); });
+$("tut-start").addEventListener("click", () => {
+  playSfx("click");
+  $("tutorial").hidden = true;
+  if (!profile.seenTutorial) { profile.seenTutorial = true; saveProfile(); }
+  const next = tutorialDone; tutorialDone = null;
+  if (next) next();
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Escape") return;
+  if (!$("shop").hidden) closeShop();
+  else if (!$("tutorial").hidden) $("tut-start").click();
+});
+
 /* ---------- Start ---------- */
+function beginGame() {
+  if (game.results.length === 3) { finishGame(); showResult(); }
+  else showRiddle();
+}
 (function init() {
-  // Starfield
-  for (let i = 0; i < 36; i++) {
+  for (let i = 0; i < 36; i++) { // starfield
     const s = document.createElement("div");
     s.className = "star";
     s.style.left = Math.random() * 100 + "%";
@@ -231,7 +469,11 @@ $("mute").addEventListener("click", () => {
     $("stars").appendChild(s);
   }
   try { if (localStorage.getItem("sphinx-muted") === "1") { $("mute").classList.add("off"); $("mute").textContent = "Sound: off"; $("mute").setAttribute("aria-pressed", "true"); } } catch {}
+  drawSprite($("coin"), ICONS.coin);
+  drawSprite($("shop-coin"), ICONS.coin);
+  updatePoints(false);
+  updateHelper();
   $("puzzle-no").textContent = `Daily challenge #${day}`;
-  if (game.results.length === 3) { finishGame(); showResult(); }
-  else showRiddle();
+  if (!profile.seenTutorial) openTutorial(beginGame);
+  else beginGame();
 })();
