@@ -20,7 +20,13 @@
     <header>
       <h1>Beat the Sphinx</h1>
       <p id="puzzle-no"></p>
-      <button type="button" id="mute" class="small" aria-pressed="false">Sound: on</button>
+      <div class="hud">
+        <span class="points" id="points-pill" aria-label="Points"><canvas id="coin" class="sprite" width="8" height="8"></canvas><span id="points">0</span></span>
+        <button type="button" id="shop-btn" class="small">Shop</button>
+        <button type="button" id="help-btn" class="small" aria-label="How to play">?</button>
+        <button type="button" id="mute" class="small" aria-pressed="false">Sound: on</button>
+      </div>
+      <p id="helper" class="helper"></p>
     </header>
 
     <canvas id="sphinx" class="sprite sphinx" width="16" height="16" role="img" aria-label="The Sphinx"></canvas>
@@ -34,6 +40,8 @@
         <input id="answer" type="text" placeholder="Your answer" required>
         <button type="submit">Answer</button>
       </form>
+      <button type="button" id="power-btn" class="power" hidden></button>
+      <p id="hint" class="hint" role="status" hidden></p>
       <div id="feedback" role="status" hidden>
         <p id="feedback-text"></p>
         <button type="button" id="next-btn">Next riddle</button>
@@ -44,13 +52,44 @@
       <h2 id="verdict"></h2>
       <p id="verdict-sub"></p>
       <div class="progress" id="result-progress"></div>
+      <div class="box earn" id="earn" hidden></div>
       <button type="button" id="share-btn">Copy result</button>
       <dl class="stats" id="stats"></dl>
       <p class="note">New riddles at midnight.</p>
     </section>
   </main>
+  <div id="tutorial" class="overlay" role="dialog" aria-modal="true" aria-labelledby="tut-title" hidden>
+    <div class="overlay-inner">
+      <div class="box tutorial">
+        <h2 id="tut-title">How to play</h2>
+        <ol>
+          <li>The Sphinx asks 3 riddles each day: easy, medium, and hard.</li>
+          <li>Type your answer. You get one try per riddle.</li>
+          <li>Get 2 right and you walk free. Get fewer and you are eaten.</li>
+          <li>Earn points for correct answers, surviving, and daily streaks.</li>
+          <li>Spend points in the Shop on gods. Each gives a power, but has a drawback.</li>
+          <li>New riddles arrive every day at midnight.</li>
+        </ol>
+      </div>
+      <button type="button" id="tut-start">Start</button>
+    </div>
+  </div>
+
+  <div id="shop" class="overlay" role="dialog" aria-modal="true" aria-labelledby="shop-title" hidden>
+    <div class="overlay-inner">
+      <div class="shop-head">
+        <h2 id="shop-title">Shop</h2>
+        <span class="points"><canvas id="shop-coin" class="sprite" width="8" height="8"></canvas><span id="shop-points">0</span></span>
+        <button type="button" id="shop-close" class="small">Close</button>
+      </div>
+      <p id="shop-note" class="note"></p>
+      <div id="shop-list" class="shop-list"></div>
+    </div>
+  </div>
+
   <script src="riddles.js"></script>
   <script src="sprites.js"></script>
+  <script src="gods.js"></script>
   <script src="sound.js"></script>
   <script src="script.js"></script>
 </body>
