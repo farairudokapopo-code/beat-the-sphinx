@@ -2,7 +2,9 @@
 const missingFiles = [];
 if (typeof RIDDLES === "undefined") missingFiles.push("riddles.js");
 if (typeof drawSphinx === "undefined") missingFiles.push("sprites.js");
+if (typeof paintArt === "undefined") missingFiles.push("art.js");
 if (typeof GODS === "undefined") missingFiles.push("gods.js");
+if (typeof SKINS === "undefined") missingFiles.push("skins.js");
 if (typeof playSfx === "undefined") missingFiles.push("sound.js");
 if (missingFiles.length) {
   document.querySelector("main").insertAdjacentHTML("beforeend",
@@ -87,8 +89,9 @@ if (!game.mods) game.mods = freshMods();
 const riddles = TIERS.map((t, i) => pickRiddle(t, i, day));
 if (game.mods.reroll >= 0) riddles[game.mods.reroll] = pickRiddle(TIERS[game.mods.reroll], game.mods.reroll, day + 1);
 let stats = load("sphinx-stats", { played: 0, wins: 0, streak: 0, best: 0, lastWinDay: 0 });
-let profile = Object.assign({ points: 0, lifetime: 0, games: 0, owned: [], equipped: null, seenTutorial: false },
-  load("sphinx-profile", {}));
+let profile = Object.assign({ points: 0, lifetime: 0, games: 0, owned: [], equipped: null, seenTutorial: false,
+  skinsOwned: ["classic"], look: { skin: "classic", primary: null, secondary: null } }, load("sphinx-profile", {}));
+if (!profile.skinsOwned.includes("classic")) profile.skinsOwned.push("classic");
 const saveGame = () => save("sphinx-game", game);
 const saveProfile = () => save("sphinx-profile", profile);
 
@@ -122,6 +125,7 @@ function computeEarned(g, survived, streak) {
 function updatePoints(animate) {
   $("points").textContent = profile.points;
   $("shop-points").textContent = profile.points;
+  $("look-points").textContent = profile.points;
   if (animate && !REDUCED_MOTION) restart($("points-pill"), "pop");
 }
 function updateHelper() {
@@ -152,13 +156,13 @@ function renderEarn() {
 const sphinx = $("sphinx");
 let mood = "watch", chompTimer = null, typer = null;
 
-function setMood(m) { mood = m; drawSphinx(sphinx, m); }
+function setMood(m) { mood = m; drawSphinx(sphinx, m, profile.look); }
 function restart(el, cls) { el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); }
 
 setInterval(() => { // the Sphinx blinks every few seconds while watching
   if (mood !== "watch" || REDUCED_MOTION) return;
-  drawSphinx(sphinx, "blink");
-  setTimeout(() => mood === "watch" && drawSphinx(sphinx, "watch"), 180);
+  drawSphinx(sphinx, "blink", profile.look);
+  setTimeout(() => mood === "watch" && drawSphinx(sphinx, "watch", profile.look), 180);
 }, 3200);
 
 function typeText(el, text) {
@@ -318,7 +322,7 @@ function renderShop() {
     card.className = "shop-card" + (equipped ? " equipped" : "");
     const art = document.createElement("canvas");
     art.className = "sprite god-canvas";
-    drawSprite(art, godRows(g), godPalette(g));
+    drawGod(art, g);
     const info = document.createElement("div");
     const title = document.createElement("h3"); title.textContent = `${g.name}: ${g.title}`;
     const perk = document.createElement("p"); perk.className = "perk"; perk.textContent = "Power: " + g.perk;
@@ -355,6 +359,68 @@ function equipGod(g) {
   renderShop();
   if (!$("riddle-view").hidden && game.god === undefined) { renderHint(game.results.length); refreshPower(); }
 }
+
+/* ---------- Customize: skins and colours ---------- */
+const SWATCHES = ["#f2c14e", "#2f6fd0", "#d9453b", "#5fd38a", "#2fb5a8", "#8a4bd6", "#ff7fb0", "#f2994a", "#fdf3d0", "#6b6b7b"];
+function redrawSphinx() { drawSphinx(sphinx, mood, profile.look); drawSphinx($("look-preview"), "watch", profile.look); }
+function unlockSkin(skin) {
+  // New unlock types (for example a secret code) can be added here later.
+  if (skin.unlock.type !== "points" || profile.points < skin.unlock.cost) return false;
+  profile.points -= skin.unlock.cost;
+  return true;
+}
+function buySkin(skin) {
+  if (profile.skinsOwned.includes(skin.id) || !unlockSkin(skin)) return;
+  profile.skinsOwned.push(skin.id);
+  profile.look = { skin: skin.id, primary: null, secondary: null };
+  saveProfile(); updatePoints(true); playSfx("coin"); renderLook();
+}
+function selectSkin(skin) {
+  profile.look = { skin: skin.id, primary: null, secondary: null };
+  saveProfile(); playSfx("click"); renderLook();
+}
+function setColor(which, hex) {
+  profile.look[which] = hex;
+  saveProfile(); redrawSphinx(); syncColorInputs();
+}
+function syncColorInputs() {
+  const colors = lookColors(profile.look);
+  $("color-primary").value = colors.primary;
+  $("color-secondary").value = colors.secondary;
+}
+function renderLook() {
+  syncColorInputs();
+  redrawSphinx();
+  const list = $("skin-list");
+  list.innerHTML = "";
+  SKINS.forEach((skin) => {
+    const owned = profile.skinsOwned.includes(skin.id), selected = profile.look.skin === skin.id;
+    const card = document.createElement("div");
+    card.className = "shop-card" + (selected ? " equipped" : "");
+    const art = document.createElement("canvas");
+    art.className = "sprite god-canvas";
+    drawSphinx(art, "watch", { skin: skin.id, primary: null, secondary: null });
+    const info = document.createElement("div");
+    const title = document.createElement("h3"); title.textContent = skin.name;
+    const blurb = document.createElement("p"); blurb.textContent = skin.blurb;
+    const btn = document.createElement("button");
+    btn.type = "button";
+    if (!owned) {
+      btn.textContent = `Unlock for ${skin.unlock.cost}`;
+      btn.disabled = profile.points < skin.unlock.cost;
+      btn.addEventListener("click", () => buySkin(skin));
+    } else {
+      btn.textContent = selected ? "Selected" : "Select";
+      btn.disabled = selected;
+      btn.addEventListener("click", () => selectSkin(skin));
+    }
+    info.append(title, blurb, btn);
+    card.append(art, info);
+    list.appendChild(card);
+  });
+}
+function openLook() { renderLook(); $("look").hidden = false; $("look-close").focus(); }
+function closeLook() { $("look").hidden = true; }
 
 let tutorialDone = null;
 function openTutorial(onClose) {
@@ -440,6 +506,17 @@ $("mute").addEventListener("click", () => {
 
 $("shop-btn").addEventListener("click", () => { playSfx("click"); renderShop(); $("shop").hidden = false; $("shop-close").focus(); });
 $("shop-close").addEventListener("click", () => { playSfx("click"); closeShop(); });
+$("look-btn").addEventListener("click", () => { playSfx("click"); openLook(); });
+$("look-close").addEventListener("click", () => { playSfx("click"); closeLook(); });
+$("color-primary").addEventListener("input", (e) => setColor("primary", e.target.value));
+$("color-secondary").addEventListener("input", (e) => setColor("secondary", e.target.value));
+$("color-reset").addEventListener("click", () => { profile.look.primary = null; profile.look.secondary = null; saveProfile(); playSfx("click"); renderLook(); });
+["primary", "secondary"].forEach((which) => SWATCHES.forEach((hex) => {
+  const sw = document.createElement("button");
+  sw.type = "button"; sw.className = "swatch"; sw.style.background = hex; sw.setAttribute("aria-label", `${which} ${hex}`);
+  sw.addEventListener("click", () => setColor(which, hex));
+  $("swatches-" + which).appendChild(sw);
+}));
 $("help-btn").addEventListener("click", () => { playSfx("click"); openTutorial(null); });
 $("tut-start").addEventListener("click", () => {
   playSfx("click");
@@ -450,7 +527,8 @@ $("tut-start").addEventListener("click", () => {
 });
 document.addEventListener("keydown", (e) => {
   if (e.key !== "Escape") return;
-  if (!$("shop").hidden) closeShop();
+  if (!$("look").hidden) closeLook();
+  else if (!$("shop").hidden) closeShop();
   else if (!$("tutorial").hidden) $("tut-start").click();
 });
 
@@ -471,6 +549,7 @@ function beginGame() {
   try { if (localStorage.getItem("sphinx-muted") === "1") { $("mute").classList.add("off"); $("mute").textContent = "Sound: off"; $("mute").setAttribute("aria-pressed", "true"); } } catch {}
   drawSprite($("coin"), ICONS.coin);
   drawSprite($("shop-coin"), ICONS.coin);
+  drawSprite($("look-coin"), ICONS.coin);
   updatePoints(false);
   updateHelper();
   $("puzzle-no").textContent = `Daily challenge #${day}`;
