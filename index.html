@@ -23,13 +23,14 @@
       <div class="hud">
         <span class="points" id="points-pill" aria-label="Points"><canvas id="coin" class="sprite" width="8" height="8"></canvas><span id="points">0</span></span>
         <button type="button" id="shop-btn" class="small">Shop</button>
+        <button type="button" id="look-btn" class="small">Customize</button>
         <button type="button" id="help-btn" class="small" aria-label="How to play">?</button>
         <button type="button" id="mute" class="small" aria-pressed="false">Sound: on</button>
       </div>
       <p id="helper" class="helper"></p>
     </header>
 
-    <canvas id="sphinx" class="sprite sphinx" width="16" height="16" role="img" aria-label="The Sphinx"></canvas>
+    <canvas id="sphinx" class="sprite sphinx" width="32" height="32" role="img" aria-label="The Sphinx"></canvas>
 
     <section id="riddle-view" hidden>
       <div class="progress" id="progress" aria-label="Progress"></div>
@@ -87,9 +88,29 @@
     </div>
   </div>
 
+  <div id="look" class="overlay" role="dialog" aria-modal="true" aria-labelledby="look-title" hidden>
+    <div class="overlay-inner">
+      <div class="shop-head">
+        <h2 id="look-title">Customize</h2>
+        <span class="points"><canvas id="look-coin" class="sprite" width="8" height="8"></canvas><span id="look-points">0</span></span>
+        <button type="button" id="look-close" class="small">Close</button>
+      </div>
+      <canvas id="look-preview" class="sprite look-preview" width="32" height="32" role="img" aria-label="Preview of your Sphinx"></canvas>
+      <div class="color-rows">
+        <div class="color-row"><label for="color-primary">Primary color</label><input type="color" id="color-primary"><div class="swatches" id="swatches-primary"></div></div>
+        <div class="color-row"><label for="color-secondary">Secondary color</label><input type="color" id="color-secondary"><div class="swatches" id="swatches-secondary"></div></div>
+        <button type="button" id="color-reset" class="small">Reset colors</button>
+      </div>
+      <h3 class="section-title">Skins</h3>
+      <div id="skin-list" class="shop-list"></div>
+    </div>
+  </div>
+
   <script src="riddles.js"></script>
   <script src="sprites.js"></script>
+  <script src="art.js"></script>
   <script src="gods.js"></script>
+  <script src="skins.js"></script>
   <script src="sound.js"></script>
   <script src="script.js"></script>
 </body>
