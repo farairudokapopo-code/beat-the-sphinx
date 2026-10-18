@@ -31,6 +31,9 @@ A daily riddle game with a pixel-art Sphinx. Answer three riddles of rising diff
 | `script.js` | Game logic, daily selection, stats, screens |
 | `riddles.js` | Riddle data by difficulty |
 | `sprites.js` | Pixel sprite grids and canvas drawing |
+| `art.js` | Pixel-art engine and the shape recipes for every character |
+| `skins.js` | Sphinx skin list and colors |
+| `gods.js` | The ten gods: powers, drawbacks, and colors |
 | `sound.js` | Synthesized sound effects |
 
 ## Ideas for later
